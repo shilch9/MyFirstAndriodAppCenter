@@ -1,0 +1,57 @@
+# Android
+# Build your Android project with Gradle.
+# Add steps that test, sign, and distribute the APK, save build artifacts, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/android
+
+trigger:
+  branches:
+    include:
+      - master
+pr:
+  - master
+
+pool:
+  vmImage: 'macos-latest'
+
+variables:
+- group: sampleapp-android
+
+steps:
+- task: Gradle@2
+  inputs:
+    workingDirectory: $(Build.Repository.LocalPath)
+    gradleWrapperFile: 'gradlew'
+    publishJUnitResults: true
+    testResultsFiles: '**/TEST-*.xml'
+    javaHomeOption: 'JDKVersion'
+    gradleOptions: '-Xmx3072m'
+    sonarQubeRunAnalysis: true
+    tasks: 'clean build test assembleRelease'
+
+- task: AndroidSigning@3
+  inputs:
+    apkFiles: '**/*.apk'
+    apksignerKeystoreFile: 'sampleapp-android.keystore'
+    apksignerKeystorePassword: $(keystore-password)
+    apksignerKeystoreAlias: $(alias)
+    apksignerKeyPassword: $(key-password)
+- task: AppCenterDistribute@3
+  inputs:
+    serverEndpoint: 'Vyas (v-vynell@microsoft.com) App Center Token'
+    appSlug: 'XTCTeam/appcenter-sampleapp-android'
+    appFile: '**/*.apk'
+    symbolsOption: 'Android'
+    symbolsMappingTxtFile: '**/*mapping.txt'
+    releaseNotesOption: 'input'
+    releaseNotesInput: 'Sample Release Notes from Azure Pipelines'
+    destinationType: 'groups'
+- task: AppCenterTest@1
+  inputs:
+    appFile: '**/*.apk'
+    artifactsDirectory: '$(Build.ArtifactStagingDirectory)/AppCenterTest'
+    frameworkOption: 'espresso'
+    credentialsOption: 'serviceEndpoint'
+    serverEndpoint: 'Vyas (v-vynell@microsoft.com) App Center Token'
+    appSlug: 'XTCTeam/appcenter-sampleapp-android'
+    devices: 'XTCTeam/6-dot-0-1-9-dot-0-oneplus-galaxy-s7'
+    localeOption: 'en_US'
